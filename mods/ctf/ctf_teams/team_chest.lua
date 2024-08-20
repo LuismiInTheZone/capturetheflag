@@ -5,6 +5,38 @@ local blacklist = {
 	"default:pick_stone",
 }
 
+
+local item_value = {
+	["default:sword_diamond"          ] = 16,
+	["default:sword_mese"             ] = 13,
+	["ctf_ranged:shotgun_loaded"      ] = 12,
+	["ctf_ranged:shotgun"             ] = 10,
+	["ctf_ranged:sniper_magnum_loaded"] = 10,
+	["ctf_ranged:sniper_magnum"       ] = 8,
+	["default:sword_steel"            ] = 7,
+	["default:pick_diamond"           ] = 7,
+	["default:axe_diamond"            ] = 7,
+	["grenades:frag"                  ] = 6,
+	["default:pick_mese"              ] = 6,
+	["ctf_healing:medkit"             ] = 6,
+	["default:axe_mese"               ] = 6,
+	["grenades:poison"                ] = 5,
+	["ctf_ranged:rifle_loaded"        ] = 5,
+	["ctf_ranged:smg_loaded"          ] = 5,
+	["ctf_ranged:rifle"               ] = 4,
+	["ctf_ranged:smg"                 ] = 4,
+	["ctf_healing:bandage"            ] = 4,
+	["default:shovel_diamond"         ] = 4,
+	["default:pick_steel"             ] = 3,
+	["default:axe_steel"              ] = 3,
+	["default:shovel_mese"            ] = 3,
+	["grenades:smoke"                 ] = 2,
+	["ctf_ranged:pistol_loaded"       ] = 2,
+	["default:mese_crystal"           ] = 2,
+	["default:shovel_steel"           ] = 2,
+	["ctf_ranged:pistol"              ] = 1,
+}
+
 local function get_chest_access(name)
 	local current_mode = ctf_modebase:get_current_mode()
 	if not current_mode then return false, false end
@@ -246,13 +278,30 @@ for _, team in ipairs(ctf_teams.teamlist) do
 			end
 		end
 
-		function def.on_metadata_inventory_put(pos, listname, index, stack, player)
-			minetest.log("action", string.format("%s puts %s to team chest at %s",
-				player:get_player_name(),
-				stack:to_string(),
-				minetest.pos_to_string(pos)
-			))
+
+	function def.on_metadata_inventory_put(pos, listname, index, stack, player)
+		minetest.log("action", string.format("%s puts %s to team chest at %s",
+			player:get_player_name(),
+			stack:to_string(),
+			minetest.pos_to_string(pos)
+		))
+		local meta = stack:get_meta()
+		local dropped_by = meta:get_string("dropped_by")
+		local pname = player:get_player_name()
+		if dropped_by ~= pname and dropped_by ~= "" then
+			local cur_mode = ctf_modebase:get_current_mode()
+			if pname and cur_mode then
+				local score = item_value[stack:get_name()] or 1
+
+				cur_mode.recent_rankings.add(pname, { score = score }, false)
+			end
 		end
+		meta:set_string("dropped_by", "")
+		local inv = minetest.get_inventory({ type="node", pos=pos })
+		local stack_ = inv:get_stack(listname,index)
+		stack_:get_meta():set_string("dropped_by", "")
+		inv:set_stack(listname, index, stack_)
+	end
 
 		function def.on_metadata_inventory_take(pos, listname, index, stack, player)
 			minetest.log("action", string.format("%s takes %s from team chest at %s",
